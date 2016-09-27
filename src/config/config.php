@@ -55,6 +55,28 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Entrust Groups Model
+    |--------------------------------------------------------------------------
+    |
+    | This is the Group model used by Entrust to create correct relations.
+    | Update the group if it is in a different namespace.
+    |
+    */
+    'group' => 'App\Group',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Entrust Groups Table
+    |--------------------------------------------------------------------------
+    |
+    | This is the groups table used by Entrust to save group to the
+    | database.
+    |
+    */
+    'groups_table' => 'groups',
+
+    /*
+    |--------------------------------------------------------------------------
     | Entrust permission_role Table
     |--------------------------------------------------------------------------
     |
