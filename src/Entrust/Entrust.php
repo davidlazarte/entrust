@@ -1,4 +1,6 @@
-<?php namespace Zizaco\Entrust;
+<?php
+
+namespace Zizaco\Entrust;
 
 /**
  * This class is the main entry point of entrust. Usually this the interaction
@@ -36,10 +38,10 @@ class Entrust
      *
      * @return bool
      */
-    public function hasRole($role, $requireAll = false)
+    public function hasRole($role, $group = null, $requireAll = false)
     {
         if ($user = $this->user()) {
-            return $user->hasRole($role, $requireAll);
+            return $user->hasRole($role, $group, $requireAll);
         }
 
         return false;
@@ -52,10 +54,10 @@ class Entrust
      *
      * @return bool
      */
-    public function can($permission, $requireAll = false)
+    public function can($permission, $group = null, $requireAll = false)
     {
         if ($user = $this->user()) {
-            return $user->can($permission, $requireAll);
+            return $user->can($permission, $group, $requireAll);
         }
 
         return false;
@@ -70,10 +72,10 @@ class Entrust
      *
      * @return bool
      */
-    public function ability($roles, $permissions, $options = [])
+    public function ability($roles, $permissions, $group = null, $options = [])
     {
         if ($user = $this->user()) {
-            return $user->ability($roles, $permissions, $options);
+            return $user->ability($roles, $permissions, $group = null, $options);
         }
 
         return false;

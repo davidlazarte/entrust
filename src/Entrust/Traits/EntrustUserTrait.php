@@ -19,7 +19,8 @@ trait EntrustUserTrait
     {
         $userPrimaryKey = $this->primaryKey;
         $cacheKey = 'entrust_roles_for_user_'.$this->$userPrimaryKey;
-        return Cache::tags(Config::get('entrust.role_user_table'))->remember($cacheKey, Config::get('cache.ttl'), function () {
+        return Cache::tags(Config::get('entrust.role_user_table'))
+          ->remember($cacheKey, Config::get('cache.ttl'), function () {
             return $this->roles()->get();
         });
     }
@@ -49,7 +50,12 @@ trait EntrustUserTrait
      */
     public function roles()
     {
-        return $this->belongsToMany(Config::get('entrust.role'), Config::get('entrust.role_user_table'), Config::get('entrust.user_foreign_key'), Config::get('entrust.role_foreign_key'));
+        return $this->belongsToMany(
+            Config::get('entrust.role'),
+            Config::get('entrust.role_user_table'),
+            Config::get('entrust.user_foreign_key'),
+            Config::get('entrust.role_foreign_key')
+        )->withPivot(Config::get('entrust.group_foreign_key'));
     }
 
     /**
@@ -73,22 +79,46 @@ trait EntrustUserTrait
     }
 
     /**
-     * Checks if the user has a role by its name.
+     * Many-to-Many relations with Group.
      *
-     * @param string|array $name       Role name or array of role names.
-     * @param bool         $requireAll All roles in the array are required.
-     *
-     * @return bool
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
      */
-    public function hasRole($name, $requireAll = false)
+    public function groups()
     {
-        if (is_array($name)) {
-            foreach ($name as $roleName) {
-                $hasRole = $this->hasRole($roleName);
+      return $this->belongsToMany(
+        Config::get('entrust.group'),
+        Config::get('entrust.role_user_table'),
+        Config::get('entrust.user_foreign_key'),
+        Config::get('entrust.group_foreign_key')
+      )->withPivot(Config::get('entrust.role_foreign_key'));
+    }
 
-                if ($hasRole && !$requireAll) {
+    /**
+       * Checks if the user has a role by its name.
+       *
+       * @param string|array   $name         Role name or array of role names.
+       * @param int|bool       $group_id        Group name or requiredAll roles.
+       * @param bool           $requireAll   All roles in the array are required.
+       *
+       * @return bool
+       */
+    public function hasRole($name, $group = null, $requireAll = false)
+    {
+        $requireAll = is_bool($group) ? $group : $requireAll;
+        $group = is_bool($group) ? null : $group;
+
+        if (is_array($name))
+        {
+            foreach ($name as $roleName)
+            {
+                $hasRole = $this->hasRole($roleName, $group);
+
+                if ($hasRole && !$requireAll)
+                {
                     return true;
-                } elseif (!$hasRole && $requireAll) {
+                }
+                elseif (!$hasRole && $requireAll)
+                {
                     return false;
                 }
             }
@@ -97,11 +127,28 @@ trait EntrustUserTrait
             // If we've made it this far and $requireAll is TRUE, then ALL of the roles were found.
             // Return the value of $requireAll;
             return $requireAll;
-        } else {
-            foreach ($this->cachedRoles() as $role) {
-                if ($role->name == $name) {
-                    return true;
-                }
+        }
+
+        if (!empty($group)) {
+            if (is_string($group)) {
+                $group = call_user_func_array(
+                    [Config::get('entrust.group'), 'where'],
+                    ['name', $group]
+                )->first();
+            }
+            if (is_int($group)) {
+                $group = call_user_func_array(
+                    [Config::get('entrust.group'), 'find'],
+                    [$group]
+                )->first();
+            }
+
+            $group = is_null($group) ? $group : $group->getKey();
+        }
+
+        foreach ($this->cachedRoles() as $role) {
+            if ($role->name == $name && $role->pivot->group_id == $group) {
+                return true;
             }
         }
 
@@ -111,20 +158,29 @@ trait EntrustUserTrait
     /**
      * Check if user has a permission by its name.
      *
-     * @param string|array $permission Permission string or array of permissions.
-     * @param bool         $requireAll All permissions in the array are required.
+     * @param string|array     $permission   Permission string or array of permissions
+     * @param int|string|bool  $group        Group id or Group name or requiredAll roles.
+     * @param bool             $requireAll   All permissions in the array are required.
      *
      * @return bool
      */
-    public function can($permission, $requireAll = false)
+    public function can($permission, $group = null, $requireAll = false)
     {
-        if (is_array($permission)) {
-            foreach ($permission as $permName) {
-                $hasPerm = $this->can($permName);
+        $requireAll = is_bool($group) ? $group : $requireAll;
+        $group = is_bool($group) ? null : $group;
 
-                if ($hasPerm && !$requireAll) {
+        if (is_array($permission))
+        {
+            foreach ($permission as $permName)
+            {
+                $hasPerm = $this->can($permName, $group);
+
+                if ($hasPerm && !$requireAll)
+                {
                     return true;
-                } elseif (!$hasPerm && $requireAll) {
+                }
+                elseif (!$hasPerm && $requireAll)
+                {
                     return false;
                 }
             }
@@ -133,13 +189,36 @@ trait EntrustUserTrait
             // If we've made it this far and $requireAll is TRUE, then ALL of the perms were found.
             // Return the value of $requireAll;
             return $requireAll;
-        } else {
-            foreach ($this->cachedRoles() as $role) {
-                // Validate against the Permission table
-                foreach ($role->cachedPermissions() as $perm) {
-                    if (str_is( $permission, $perm->name) ) {
-                        return true;
-                    }
+        }
+
+        if (!empty($group)) {
+            if (is_string($group)) {
+                $group = call_user_func_array(
+                    [Config::get('entrust.group'), 'where'],
+                    ['name', $group]
+                )->first();
+            }
+            if (is_int($group)) {
+                $group = call_user_func_array(
+                    [Config::get('entrust.group'), 'find'],
+                    [$group]
+                )->first();
+            }
+
+            $group = is_null($group) ? $group : $group->getKey();
+        }
+
+        foreach ($this->cachedRoles() as $role)
+        {
+            // Validate against the Permission table
+            if ($role->pivot->group_id != $group) {
+                continue;
+            }
+
+            // Validate against the Permission table
+            foreach ($role->cachedPermissions() as $perm) {
+                if (str_is($permission, $perm->name)) {
+                    return true;
                 }
             }
         }
@@ -150,16 +229,20 @@ trait EntrustUserTrait
     /**
      * Checks role(s) and permission(s).
      *
-     * @param string|array $roles       Array of roles or comma separated string
-     * @param string|array $permissions Array of permissions or comma separated string.
-     * @param array        $options     validate_all (true|false) or return_type (boolean|array|both)
+     * @param string|array     $roles        Array of roles or comma separated string
+     * @param string|array     $permissions  Array of permissions or comma separated string.
+     * @param int|string|bool  $group        Group id or Group name or requiredAll roles.
+     * @param array            $options      validate_all (true|false) or return_type (boolean|array|both)
      *
      * @throws \InvalidArgumentException
      *
      * @return array|bool
      */
-    public function ability($roles, $permissions, $options = [])
+    public function ability($roles, $permissions, $group = null, $options = [])
     {
+        $options = is_array($group) ? $group : $options;
+        $group = is_array($group) ? null : $group;
+
         // Convert string to array if that's what is passed in.
         if (!is_array($roles)) {
             $roles = explode(',', $roles);
@@ -190,10 +273,10 @@ trait EntrustUserTrait
         $checkedRoles = [];
         $checkedPermissions = [];
         foreach ($roles as $role) {
-            $checkedRoles[$role] = $this->hasRole($role);
+            $checkedRoles[$role] = $this->hasRole($role, $group);
         }
         foreach ($permissions as $permission) {
-            $checkedPermissions[$permission] = $this->can($permission);
+            $checkedPermissions[$permission] = $this->can($permission, $group);
         }
 
         // If validate all and there is a false in either

@@ -89,4 +89,33 @@ return [
     */
     'role_foreign_key' => 'role_id',
 
+    /*
+    |--------------------------------------------------------------------------
+    | Group Foreign key on Entrust's role_user table (Pivot)
+    |--------------------------------------------------------------------------
+    */
+    'group_foreign_key' => 'group_id',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Permission Foreign key on Entrust's permission_role Table (Pivot)
+    |--------------------------------------------------------------------------
+    */
+    'permission_foreign_key' => 'permission_id',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Method to be called in the middleware return case
+    | Available: abort|redirect
+    |--------------------------------------------------------------------------
+    */
+    'middleware_handling' => 'abort',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Parameter passed to the middleware_handling method
+    |--------------------------------------------------------------------------
+    */
+    'middleware_params' => '403',
+
 ];
