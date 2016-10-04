@@ -1,17 +1,15 @@
-<?php
-
-namespace Laratrust;
+<?php namespace Zizaco\Entrust;
 
 /**
- * This file is part of Laratrust,
+ * This file is part of Entrust,
  * a role & permission management solution for Laravel.
  *
  * @license MIT
- * @package Laratrust
+ * @package Zizaco\Entrust
  */
 
-use Laratrust\Contracts\LaratrustGroupInterface;
-use Laratrust\Traits\LaratrustGroupTrait;
+use Zizaco\Entrust\Contracts\EntrustGroupInterface;
+use Zizaco\Entrust\Traits\EntrustGroupTrait;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Config;
 

@@ -1,6 +1,6 @@
 <?php
 
-namespace Entrust\Contracts;
+namespace Zizaco\Entrust\Contracts;
 
 /**
  * This file is part of Entrust,
